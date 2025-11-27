@@ -1,0 +1,25 @@
+# Build artifacts
+*.o
+*.d
+boot/boot.bin
+boot/boot.elf
+boot/boot.elf.map
+boot/crt0.d
+boot/crt0.o
+boot/main.d
+boot/main.o
+build
+
+# Binaries
+host/server
+host/dtls13_psk_server
+
+# Environment
+litex-env
+.vscode/settings.json
+
+# Logs
+*.log
+
+# Temp
+.rebuild_tmp

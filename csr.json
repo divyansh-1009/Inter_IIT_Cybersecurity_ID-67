@@ -1,0 +1,259 @@
+{
+    "csr_bases": {
+        "ctrl": 4026531840,
+        "ethmac": 4026533888,
+        "ethphy": 4026535936,
+        "identifier_mem": 4026537984,
+        "timer0": 4026540032,
+        "uart": 4026542080
+    },
+    "csr_registers": {
+        "ctrl_reset": {
+            "addr": 4026531840,
+            "size": 1,
+            "type": "rw"
+        },
+        "ctrl_scratch": {
+            "addr": 4026531844,
+            "size": 1,
+            "type": "rw"
+        },
+        "ctrl_bus_errors": {
+            "addr": 4026531848,
+            "size": 1,
+            "type": "ro"
+        },
+        "ethmac_sram_writer_slot": {
+            "addr": 4026533888,
+            "size": 1,
+            "type": "ro"
+        },
+        "ethmac_sram_writer_length": {
+            "addr": 4026533892,
+            "size": 1,
+            "type": "ro"
+        },
+        "ethmac_sram_writer_errors": {
+            "addr": 4026533896,
+            "size": 1,
+            "type": "ro"
+        },
+        "ethmac_sram_writer_ev_status": {
+            "addr": 4026533900,
+            "size": 1,
+            "type": "ro"
+        },
+        "ethmac_sram_writer_ev_pending": {
+            "addr": 4026533904,
+            "size": 1,
+            "type": "rw"
+        },
+        "ethmac_sram_writer_ev_enable": {
+            "addr": 4026533908,
+            "size": 1,
+            "type": "rw"
+        },
+        "ethmac_sram_reader_start": {
+            "addr": 4026533912,
+            "size": 1,
+            "type": "rw"
+        },
+        "ethmac_sram_reader_ready": {
+            "addr": 4026533916,
+            "size": 1,
+            "type": "ro"
+        },
+        "ethmac_sram_reader_level": {
+            "addr": 4026533920,
+            "size": 1,
+            "type": "ro"
+        },
+        "ethmac_sram_reader_slot": {
+            "addr": 4026533924,
+            "size": 1,
+            "type": "rw"
+        },
+        "ethmac_sram_reader_length": {
+            "addr": 4026533928,
+            "size": 1,
+            "type": "rw"
+        },
+        "ethmac_sram_reader_ev_status": {
+            "addr": 4026533932,
+            "size": 1,
+            "type": "ro"
+        },
+        "ethmac_sram_reader_ev_pending": {
+            "addr": 4026533936,
+            "size": 1,
+            "type": "rw"
+        },
+        "ethmac_sram_reader_ev_enable": {
+            "addr": 4026533940,
+            "size": 1,
+            "type": "rw"
+        },
+        "ethphy_crg_reset": {
+            "addr": 4026535936,
+            "size": 1,
+            "type": "rw"
+        },
+        "timer0_load": {
+            "addr": 4026540032,
+            "size": 1,
+            "type": "rw"
+        },
+        "timer0_reload": {
+            "addr": 4026540036,
+            "size": 1,
+            "type": "rw"
+        },
+        "timer0_en": {
+            "addr": 4026540040,
+            "size": 1,
+            "type": "rw"
+        },
+        "timer0_update_value": {
+            "addr": 4026540044,
+            "size": 1,
+            "type": "rw"
+        },
+        "timer0_value": {
+            "addr": 4026540048,
+            "size": 1,
+            "type": "ro"
+        },
+        "timer0_ev_status": {
+            "addr": 4026540052,
+            "size": 1,
+            "type": "ro"
+        },
+        "timer0_ev_pending": {
+            "addr": 4026540056,
+            "size": 1,
+            "type": "rw"
+        },
+        "timer0_ev_enable": {
+            "addr": 4026540060,
+            "size": 1,
+            "type": "rw"
+        },
+        "uart_rxtx": {
+            "addr": 4026542080,
+            "size": 1,
+            "type": "rw"
+        },
+        "uart_txfull": {
+            "addr": 4026542084,
+            "size": 1,
+            "type": "ro"
+        },
+        "uart_rxempty": {
+            "addr": 4026542088,
+            "size": 1,
+            "type": "ro"
+        },
+        "uart_ev_status": {
+            "addr": 4026542092,
+            "size": 1,
+            "type": "ro"
+        },
+        "uart_ev_pending": {
+            "addr": 4026542096,
+            "size": 1,
+            "type": "rw"
+        },
+        "uart_ev_enable": {
+            "addr": 4026542100,
+            "size": 1,
+            "type": "rw"
+        },
+        "uart_txempty": {
+            "addr": 4026542104,
+            "size": 1,
+            "type": "ro"
+        },
+        "uart_rxfull": {
+            "addr": 4026542108,
+            "size": 1,
+            "type": "ro"
+        }
+    },
+    "constants": {
+        "config_platform_name": "sim",
+        "config_clock_frequency": 1000000,
+        "config_cpu_has_interrupt": null,
+        "config_cpu_reset_addr": 0,
+        "config_cpu_has_dcache": null,
+        "config_cpu_has_icache": null,
+        "config_cpu_type_vexriscv": null,
+        "config_cpu_variant_full": null,
+        "config_cpu_family": "riscv",
+        "config_cpu_name": "vexriscv",
+        "config_cpu_human_name": "vexriscv_full",
+        "config_cpu_nop": "nop",
+        "config_main_ram_init": 1,
+        "config_identifier": "litex simulation 2025-12-05 22:54:28",
+        "hw_preamble_crc": null,
+        "rom_boot_address": 1073741824,
+        "localip1": 192,
+        "localip2": 168,
+        "localip3": 1,
+        "localip4": 50,
+        "remoteip1": 192,
+        "remoteip2": 168,
+        "remoteip3": 1,
+        "remoteip4": 100,
+        "config_csr_data_width": 32,
+        "config_csr_alignment": 32,
+        "config_csr_ordering_big": null,
+        "config_bus_standard": "wishbone",
+        "config_bus_data_width": 32,
+        "config_bus_address_width": 32,
+        "config_bus_bursting": 0,
+        "ethmac_rx_slots": 2,
+        "ethmac_tx_slots": 2,
+        "ethmac_slot_size": 2048,
+        "config_cpu_interrupts": 3,
+        "ethmac_interrupt": 2,
+        "timer0_interrupt": 1,
+        "uart_interrupt": 0
+    },
+    "memories": {
+        "rom": {
+            "base": 0,
+            "size": 131072,
+            "type": "cached"
+        },
+        "sram": {
+            "base": 268435456,
+            "size": 8192,
+            "type": "cached"
+        },
+        "main_ram": {
+            "base": 1073741824,
+            "size": 104857600,
+            "type": "cached"
+        },
+        "ethmac": {
+            "base": 2147483648,
+            "size": 8192,
+            "type": "io+linker"
+        },
+        "ethmac_rx": {
+            "base": 2147483648,
+            "size": 4096,
+            "type": "io+linker"
+        },
+        "ethmac_tx": {
+            "base": 2147487744,
+            "size": 4096,
+            "type": "io+linker"
+        },
+        "csr": {
+            "base": 4026531840,
+            "size": 65536,
+            "type": "io"
+        }
+    }
+}

@@ -1,0 +1,50 @@
+#
+# This file is part of LiteX.
+#
+# Copyright (c) 2020 Pepijn de Vos <pepijndevos@gmail.com>
+# Copyright (c) 2015-2018 Florent Kermarrec <florent@enjoy-digital.fr>
+# SPDX-License-Identifier: BSD-2-Clause
+
+import os
+
+from litex.build.generic_platform import GenericPlatform
+from litex.build.gowin import common, gowin, apicula
+
+# GowinPlatform ------------------------------------------------------------------------------------
+
+class GowinPlatform(GenericPlatform):
+    _bitstream_ext = ".fs"
+    _jtag_support  = False
+
+    _supported_toolchains = ["gowin", "apicula"]
+
+    def __init__(self, device, *args, toolchain="gowin", devicename=None, **kwargs):
+        GenericPlatform.__init__(self, device, *args, **kwargs)
+        if not devicename:
+            idx = device.find('-')
+            likely_name = f"{device[:idx]}-{device[idx+3]}"
+            raise ValueError(f"devicename not provided, maybe {likely_name}?")
+        self.devicename = devicename
+        if toolchain == "gowin":
+            self.toolchain = gowin.GowinToolchain()
+        elif toolchain == "apicula":
+            self.toolchain = apicula.GowinApiculaToolchain()
+        else:
+            raise ValueError(f"Unknown toolchain {toolchain}")
+
+    def get_verilog(self, *args, special_overrides=dict(), **kwargs):
+        so = dict(common.gowin_special_overrides)
+        if self.device[:4] == "GW5A":
+            so.update(common.gw5a_special_overrides)
+        so.update(special_overrides)
+        return GenericPlatform.get_verilog(self, *args,
+            special_overrides = so,
+            attr_translate    = self.toolchain.attr_translate,
+            **kwargs
+        )
+
+    def build(self, *args, **kwargs):
+        return self.toolchain.build(self, *args, **kwargs)
+
+    def add_false_path_constraint(self, from_, to):
+        pass
