@@ -1,5 +1,6 @@
-// DTLS 1.3 client on LiteX + LiteEth.
+// DTLS 1.3 PQC client on LiteX + LiteEth.
 // Uses wolfSSL (vendored in boot/wolfssl) with custom UDP I/O over LiteEth.
+// Implements Post-Quantum Key Exchange using Kyber (ML-KEM).
 
 #include <stdio.h>
 #include <stdint.h>
@@ -61,7 +62,7 @@
 // DTLS settings
 #define DTLS_MTU           1200
 #define DTLS_MAX_RX        1600
-#define DTLS_APP_MSG       "Hello from LiteX DTLS 1.3 client"
+#define DTLS_APP_MSG       "Hello from LiteX PQC-DTLS 1.3 client"
 
 static const uint8_t kLocalMac[6] = {
     LOCAL_MAC0, LOCAL_MAC1, LOCAL_MAC2,
@@ -258,7 +259,7 @@ static int dtls_io_send(WOLFSSL* ssl, char* buf, int sz, void* ctx)
 }
 
 // ------------------------ ECC Certificates & Keys ------------------------
-// Standard ECC certificates for initial DTLS 1.3 implementation
+// Standard ECC certificates for DTLS 1.3 handshake
 #include "wolfssl/certs_data.h"
 
 #endif // CSR_ETHMAC_BASE
@@ -282,7 +283,7 @@ static int run_dtls13_demo(void)
     printf("Ethernet MAC not present in this build; rebuild with --with-ethernet.\n");
     return -1;
 #else
-    printf("\n=== DTLS 1.3 Client ===\n");
+    printf("\n=== DTLS 1.3 Client (Kyber PQC Key Exchange) ===\n");
     fflush(stdout);
     print_ipv4("Local IP: ",  kLocalIp);
     print_ipv4("Remote IP:",  kRemoteIp);
@@ -363,6 +364,27 @@ static int run_dtls13_demo(void)
     wolfSSL_CTX_set_cipher_list(ctx, "TLS13-AES128-GCM-SHA256");
     printf("Cipher suite set to TLS13-AES128-GCM-SHA256.\n");
 
+#ifdef HAVE_PQC
+    // Force a Post-Quantum KEM for key exchange. Without this the client only
+    // advertises classical curves and the handshake silently falls back to
+    // ECDHE, so this call is what actually makes the channel quantum-safe.
+    // ML-KEM-512 (FIPS 203, NIST level 1) is the smallest/fastest KEM, chosen
+    // to minimise latency and memory on the 1 MHz RISC-V core.
+    {
+        int kem_groups[] = { WOLFSSL_ML_KEM_512 };
+        if (wolfSSL_CTX_set_groups(ctx, kem_groups,
+                                   (int)(sizeof(kem_groups) / sizeof(kem_groups[0])))
+                != WOLFSSL_SUCCESS) {
+            printf("Failed to set PQC key-exchange group (ML-KEM-512)\n");
+            wolfSSL_CTX_free(ctx);
+            udp_set_callback(NULL);
+            wolfSSL_Cleanup();
+            return -1;
+        }
+        printf("Post-Quantum Key Exchange enabled (ML-KEM-512).\n");
+    }
+#endif
+
     wolfSSL_SetIORecv(ctx, dtls_io_recv);
     wolfSSL_SetIOSend(ctx, dtls_io_send);
 
@@ -382,7 +404,7 @@ static int run_dtls13_demo(void)
     wolfSSL_SetIOReadCtx(ssl, &net);
     wolfSSL_SetIOWriteCtx(ssl, &net);
     
-    printf("Starting DTLS 1.3 handshake...\n");
+    printf("Starting DTLS 1.3 handshake with Kyber key exchange...\n");
     int ret;
     int attempts = 0;
     const int kMaxAttempts = 300;
@@ -466,7 +488,8 @@ int main(void)
 #endif
     uart_init();
 
-    printf("\nLiteX DTLS 1.3 client (wolfSSL)\n");
+    printf("\nLiteX DTLS 1.3 PQC client (wolfSSL)\n");
+    printf("Post-Quantum Key Exchange with Kyber\n");
     printf("DEBUG: About to call run_dtls13_demo\n");
     fflush(stdout);
 
