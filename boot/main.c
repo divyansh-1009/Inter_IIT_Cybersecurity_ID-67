@@ -1,6 +1,6 @@
 // DTLS 1.3 PQC client on LiteX + LiteEth.
 // Uses wolfSSL (vendored in boot/wolfssl) with custom UDP I/O over LiteEth.
-// Implements Post-Quantum Key Exchange using Kyber (ML-KEM).
+// Implements Post-Quantum Cryptography using Kyber (ML-KEM) and Dilithium.
 
 #include <stdio.h>
 #include <stdint.h>
@@ -258,9 +258,9 @@ static int dtls_io_send(WOLFSSL* ssl, char* buf, int sz, void* ctx)
     return sz;
 }
 
-// ------------------------ ECC Certificates & Keys ------------------------
-// Standard ECC certificates for DTLS 1.3 handshake
-#include "wolfssl/certs_data.h"
+// ------------------------ Dilithium PQC Certificates & Keys ------------------------
+// Auto-generated Post-Quantum Cryptography certificates for DTLS 1.3
+#include "wolfssl/certs_dilithium_data.h"
 
 #endif // CSR_ETHMAC_BASE
 
@@ -283,7 +283,8 @@ static int run_dtls13_demo(void)
     printf("Ethernet MAC not present in this build; rebuild with --with-ethernet.\n");
     return -1;
 #else
-    printf("\n=== DTLS 1.3 Client (Kyber PQC Key Exchange) ===\n");
+    printf("\n=== DTLS 1.3 Client (Dilithium PQC) ===\n");
+    printf("Using Post-Quantum Cryptography Certificates\n");
     fflush(stdout);
     print_ipv4("Local IP: ",  kLocalIp);
     print_ipv4("Remote IP:",  kRemoteIp);
@@ -322,45 +323,45 @@ static int run_dtls13_demo(void)
         return -1;
     }
 
-    // Load CA Certificate to verify Server
-    printf("Loading CA certificate (%u bytes)...\n", ca_cert_der_len);
-    if (wolfSSL_CTX_load_verify_buffer(ctx, ca_cert_der, ca_cert_der_len, WOLFSSL_FILETYPE_ASN1) != WOLFSSL_SUCCESS) {
+    // 1. Load CA Certificate to verify Server (Dilithium)
+    printf("Loading Dilithium CA certificate (%u bytes)...\n", ca_cert_dilithium_der_len);
+    if (wolfSSL_CTX_load_verify_buffer(ctx, ca_cert_dilithium_der, ca_cert_dilithium_der_len, WOLFSSL_FILETYPE_ASN1) != WOLFSSL_SUCCESS) {
         printf("Failed to load CA certificate\n");
         wolfSSL_CTX_free(ctx);
         udp_set_callback(NULL);
         wolfSSL_Cleanup();
         return -1;
     }
-    printf("CA certificate loaded successfully.\n");
+    printf("Dilithium CA certificate loaded successfully.\n");
 
-    // Load Client Certificate & Private Key for Mutual Auth
-    printf("Loading client certificate (%u bytes)...\n", client_cert_der_len);
-    if (wolfSSL_CTX_use_certificate_buffer(ctx, client_cert_der, client_cert_der_len, WOLFSSL_FILETYPE_ASN1) != WOLFSSL_SUCCESS) {
+    // 2. Load Client Certificate & Private Key for Mutual Auth (Dilithium)
+    printf("Loading Dilithium client certificate (%u bytes)...\n", client_cert_dilithium_der_len);
+    if (wolfSSL_CTX_use_certificate_buffer(ctx, client_cert_dilithium_der, client_cert_dilithium_der_len, WOLFSSL_FILETYPE_ASN1) != WOLFSSL_SUCCESS) {
         printf("Failed to load Client certificate\n");
         wolfSSL_CTX_free(ctx);
         udp_set_callback(NULL);
         wolfSSL_Cleanup();
         return -1;
     }
-    printf("Client certificate loaded successfully.\n");
+    printf("Dilithium client certificate loaded successfully.\n");
     
-    printf("Loading client private key (%u bytes)...\n", client_key_der_len);
-    if (wolfSSL_CTX_use_PrivateKey_buffer(ctx, client_key_der, client_key_der_len, WOLFSSL_FILETYPE_ASN1) != WOLFSSL_SUCCESS) {
+    printf("Loading Dilithium client private key (%u bytes)...\n", client_key_dilithium_der_len);
+    if (wolfSSL_CTX_use_PrivateKey_buffer(ctx, client_key_dilithium_der, client_key_dilithium_der_len, WOLFSSL_FILETYPE_ASN1) != WOLFSSL_SUCCESS) {
         printf("Failed to load Client private key\n");
         wolfSSL_CTX_free(ctx);
         udp_set_callback(NULL);
         wolfSSL_Cleanup();
         return -1;
     }
-    printf("Client private key loaded successfully.\n");
+    printf("Dilithium client private key loaded successfully.\n");
 
-    // Enable Mutual Authentication (ignore bad time since no RTC on target)
+    // 3. Enable Mutual Authentication (ignore bad time since no RTC on target)
     wolfSSL_CTX_set_verify(ctx,
         WOLFSSL_VERIFY_PEER | WOLFSSL_VERIFY_FAIL_IF_NO_PEER_CERT,
         verify_allow_badtime);
-    printf("Mutual authentication enabled (time validity ignored).\n");
+    printf("Mutual authentication enabled with PQC (time validity ignored).\n");
 
-    // Set Cipher Suite (TLS 1.3)
+    // 4. Set Cipher Suite (TLS 1.3)
     wolfSSL_CTX_set_cipher_list(ctx, "TLS13-AES128-GCM-SHA256");
     printf("Cipher suite set to TLS13-AES128-GCM-SHA256.\n");
 
@@ -404,7 +405,7 @@ static int run_dtls13_demo(void)
     wolfSSL_SetIOReadCtx(ssl, &net);
     wolfSSL_SetIOWriteCtx(ssl, &net);
     
-    printf("Starting DTLS 1.3 handshake with Kyber key exchange...\n");
+    printf("Starting DTLS 1.3 handshake with Dilithium PQC certificates...\n");
     int ret;
     int attempts = 0;
     const int kMaxAttempts = 300;
@@ -488,8 +489,8 @@ int main(void)
 #endif
     uart_init();
 
-    printf("\nLiteX DTLS 1.3 PQC client (wolfSSL)\n");
-    printf("Post-Quantum Key Exchange with Kyber\n");
+    printf("\nLiteX DTLS 1.3 Dilithium PQC client (wolfSSL)\n");
+    printf("Post-Quantum Cryptography with Dilithium certificates\n");
     printf("DEBUG: About to call run_dtls13_demo\n");
     fflush(stdout);
 

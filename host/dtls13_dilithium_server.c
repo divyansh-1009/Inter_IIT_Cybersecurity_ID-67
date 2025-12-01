@@ -118,9 +118,10 @@ int main(int argc, char** argv)
         return 1;
     }
     
-    printf("\n=== DTLS 1.3 Server (Kyber PQC Key Exchange) ===\n");
+    printf("\n=== DTLS 1.3 Dilithium (PQC) Server ===\n");
     printf("Server listening on %s:%d\n", bind_ip, bind_port);
-    printf("Mutual TLS authentication with certificates\n");
+    printf("Using Post-Quantum Cryptography (Dilithium)\n");
+    printf("Mutual TLS authentication with PQC certificates\n");
     printf("Waiting for client connection...\n\n");
 
     printf("[Init] Initializing wolfSSL library...\n");
@@ -212,6 +213,8 @@ int main(int argc, char** argv)
     
     printf("\n=== Starting DTLS 1.3 Handshake ===\n");
     printf("Waiting for client handshake...\n");
+    struct timeval hs_start;
+    gettimeofday(&hs_start, NULL);
     int ret;
     int handshake_attempts = 0;
     
@@ -260,18 +263,23 @@ int main(int argc, char** argv)
         return 1;
     }
     
+    struct timeval hs_end;
+    gettimeofday(&hs_end, NULL);
+    long hs_ms = (hs_end.tv_sec - hs_start.tv_sec) * 1000L +
+                 (hs_end.tv_usec - hs_start.tv_usec) / 1000L;
     const char* cipher = wolfSSL_get_cipher(ssl);
     const char* version = wolfSSL_get_version(ssl);
     printf("\n=== Handshake Complete ===\n");
+    printf("Handshake time: %ld ms\n", hs_ms);
     printf("Protocol version: %s\n", version);
     printf("Cipher suite: %s\n", cipher);
-    printf("Client certificate validated!\n");
+    printf("Client certificate validated with PQC!\n");
     printf("Ready to receive application data...\n\n");
 
     char buf[2048];
     printf("[Data] Waiting for application data from client...\n");
     
-    // Wait for application data with timeout handling
+    // Wait for application data with timeout handling (keep running until data or fatal error)
     for (;;) {
         ret = wolfSSL_read(ssl, buf, sizeof(buf));
         if (ret > 0) {
@@ -293,16 +301,17 @@ int main(int argc, char** argv)
                 int write_err = wolfSSL_get_error(ssl, write_ret);
                 fprintf(stderr, "[Data] ✗ Echo failed: write returned %d, error: %d\n", write_ret, write_err);
             }
-            continue;
+            continue;  // stay up for additional messages
         }
         
         int err = wolfSSL_get_error(ssl, ret);
         if (err == WOLFSSL_ERROR_WANT_READ) {
+            // Use select to wait for incoming data
             fd_set readfds;
             FD_ZERO(&readfds);
             FD_SET(net.sock, &readfds);
             struct timeval tv;
-            tv.tv_sec = 5;
+            tv.tv_sec = 5;  // 5 second timeout
             tv.tv_usec = 0;
             int sel = select(net.sock + 1, &readfds, NULL, NULL, &tv);
             if (sel == 0) {
@@ -318,7 +327,7 @@ int main(int argc, char** argv)
             char error_buf[80];
             wolfSSL_ERR_error_string(err, error_buf);
             fprintf(stderr, "[Data] Error string: %s\n", error_buf);
-            break;
+            break;  // fatal
         }
     }
 
