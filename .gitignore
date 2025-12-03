@@ -1,6 +1,39 @@
+# Python virtual environment
+litex-env
+
+# LiteX peripheral modules (installed via litex_setup.py)
+litedram
+liteeth
+litei2c
+liteiclink
+litejesd204b
+litepcie
+litesata
+litescope
+litesdcard
+litespi
+migen
+prog
+
+# CPU cores (installed via litex_setup.py)
+pythondata-cpu-lm32
+pythondata-cpu-minerva
+pythondata-cpu-mor1kx
+pythondata-cpu-naxriscv
+pythondata-cpu-sentinel
+pythondata-cpu-serv
+pythondata-cpu-vexiiriscv
+pythondata-cpu-vexriscv
+pythondata-cpu-vexriscv-smp
+
+# Support libraries (installed via litex_setup.py)
+pythondata-misc-tapcfg
+pythondata-misc-usb_ohci
+pythondata-software-compiler_rt
+pythondata-software-picolibc
+valentyusb
+
 # Build artifacts
-*.o
-*.d
 boot/boot.bin
 boot/boot.elf
 boot/boot.elf.map
@@ -9,17 +42,32 @@ boot/crt0.o
 boot/main.d
 boot/main.o
 build
+boot.fbi
+boot.bin
+*.o
+*.d
 
-# Binaries
+# Compiled binaries
 host/server
 host/dtls13_psk_server
 
-# Environment
-litex-env
+# Logs
+sim.log
+simulation_output.log
+server.log
+client.log
+
+# IDE settings
 .vscode/settings.json
 
-# Logs
-*.log
+# Generated certificates (regenerate with generate_dilithium_certs.sh)
+host/certs_dilithium
+
+# Misc host artifacts
+host/sys
+host/socket
+host/logging
+host/argparse
 
 # Temp
 .rebuild_tmp
