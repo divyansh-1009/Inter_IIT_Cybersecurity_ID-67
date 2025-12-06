@@ -63,6 +63,28 @@
 #define DTLS_MTU           1200
 #define DTLS_MAX_RX        1600
 #define DTLS_APP_MSG       "Hello from LiteX PQC-DTLS 1.3 client"
+#define CPU_HZ_EST         1000000u  // approximate CPU clock for cycle->time conversion
+
+static uint64_t g_hs_cycles = 0;
+static uint64_t g_hs_ms     = 0;
+static uint64_t g_data_cycles = 0;
+static uint64_t g_data_ms     = 0;
+static uint32_t g_data_bytes  = 0;
+static uint64_t g_pqc_cycles  = 0;  // PQC key exchange occurs inside handshake
+static uintptr_t g_heap_base      = 0;
+static uintptr_t g_heap_after_hs  = 0;
+static uintptr_t g_heap_after_app = 0;
+
+// Weak linker symbols for section boundaries (sizes computed if available).
+extern char _ftext[] __attribute__((weak));
+extern char _etext[] __attribute__((weak));
+extern char __rodata_start[] __attribute__((weak));
+extern char __rodata_end[] __attribute__((weak));
+extern char _fdata[] __attribute__((weak));
+extern char _edata[] __attribute__((weak));
+extern char _fbss[] __attribute__((weak));
+extern char _ebss[] __attribute__((weak));
+extern char _end[] __attribute__((weak)); // typically start of heap
 
 static const uint8_t kLocalMac[6] = {
     LOCAL_MAC0, LOCAL_MAC1, LOCAL_MAC2,
@@ -147,6 +169,32 @@ int CustomRngGenerateBlock(unsigned char *output, unsigned int sz)
         }
     }
     return 0;
+}
+
+static uint64_t cycle_count(void)
+{
+#if defined(__riscv)
+    uint64_t cycles = 0;
+    asm volatile("rdcycle %0" : "=r"(cycles));
+    return cycles;
+#else
+    return 0;
+#endif
+}
+
+static uintptr_t span_bytes(const char* start, const char* end)
+{
+    if (start == NULL || end == NULL)
+        return 0;
+    return (uintptr_t)end - (uintptr_t)start;
+}
+
+static uintptr_t heap_usage_bytes(void)
+{
+    void* brk = sbrk(0);
+    if (brk == (void*)-1 || _end == NULL)
+        return 0;
+    return (uintptr_t)brk - (uintptr_t)_end;
 }
 
 // ------------------------ UDP RX state ------------------------
@@ -406,6 +454,8 @@ static int run_dtls13_demo(void)
     wolfSSL_SetIOWriteCtx(ssl, &net);
     
     printf("Starting DTLS 1.3 handshake with Dilithium PQC certificates...\n");
+    uint64_t hs_start_cycles = cycle_count();
+    g_heap_base = heap_usage_bytes();
     int ret;
     int attempts = 0;
     const int kMaxAttempts = 300;
@@ -437,12 +487,23 @@ static int run_dtls13_demo(void)
         wolfSSL_Cleanup();
         return -1;
     }
-    printf("Handshake complete.\n");
+    uint64_t hs_end_cycles = cycle_count();
+    uint64_t hs_cycles = hs_end_cycles - hs_start_cycles;
+    uint64_t hs_ms = (CPU_HZ_EST > 0u) ? (hs_cycles * 1000u / CPU_HZ_EST) : 0u;
+    g_hs_cycles = hs_cycles;
+    g_hs_ms = hs_ms;
+    g_pqc_cycles = hs_cycles; // PQC key exchange is part of the handshake
+    g_heap_after_hs = heap_usage_bytes();
+    printf("Handshake complete in %llu cycles (~%llu ms at %u Hz).\n",
+           (unsigned long long)hs_cycles,
+           (unsigned long long)hs_ms,
+           CPU_HZ_EST);
     printf("Negotiated Cipher: %s\n", wolfSSL_get_cipher(ssl));
     printf("Negotiated Version: %s\n", wolfSSL_get_version(ssl));
 
     // Send application data
     const char app_msg[] = DTLS_APP_MSG;
+    uint64_t data_start_cycles = cycle_count();
     ret = wolfSSL_write(ssl, app_msg, (int)sizeof(app_msg));
     if (ret != (int)sizeof(app_msg)) {
         int err = wolfSSL_get_error(ssl, ret);
@@ -467,6 +528,11 @@ static int run_dtls13_demo(void)
         wolfSSL_Cleanup();
         return -1;
     }
+    uint64_t data_end_cycles = cycle_count();
+    g_data_cycles = data_end_cycles - data_start_cycles;
+    g_data_ms = (CPU_HZ_EST > 0u) ? (g_data_cycles * 1000u / CPU_HZ_EST) : 0u;
+    g_data_bytes = (uint32_t)ret;
+    g_heap_after_app = heap_usage_bytes();
 
     printf("Received %d bytes over DTLS.\n", ret);
     dump_bytes("[RX] decrypted payload", rx_buf, (unsigned)ret);
@@ -497,6 +563,44 @@ int main(void)
     int status = run_dtls13_demo();
     printf("DEBUG: run_dtls13_demo returned with status: %d\n", status);
     printf("Demo %s.\n", (status == 0) ? "PASSED" : "FAILED");
+    if (status == 0 && g_hs_cycles > 0) {
+        printf("Handshake duration (client): %llu cycles (~%llu ms at %u Hz)\n",
+               (unsigned long long)g_hs_cycles,
+               (unsigned long long)g_hs_ms,
+               CPU_HZ_EST);
+        printf("PQC key exchange cycles (within handshake): %llu cycles\n",
+               (unsigned long long)g_pqc_cycles);
+    }
+    if (status == 0 && g_data_cycles > 0 && g_data_ms > 0) {
+        // Throughput over the single app-data exchange.
+        // bytes * 8 bits/byte * 1000 ms/s / elapsed_ms = bits per second.
+        // (The tiny 37-byte demo payload dominated by round-trip latency
+        //  yields a low absolute rate; this reports it honestly in bit/s.)
+        uint64_t bps = ((uint64_t)g_data_bytes * 8u * 1000u) / g_data_ms;
+        printf("Data exchange (throughput): %u bytes in %llu ms -> ~%llu bit/s\n",
+               g_data_bytes,
+               (unsigned long long)g_data_ms,
+               (unsigned long long)bps);
+    }
+    if (status == 0) {
+        uintptr_t text_sz   = span_bytes(_ftext, _etext);
+        uintptr_t rodata_sz = span_bytes(__rodata_start, __rodata_end);
+        uintptr_t data_sz   = span_bytes(_fdata, _edata);
+        uintptr_t bss_sz    = span_bytes(_fbss, _ebss);
+        uintptr_t rom_sz    = text_sz + rodata_sz;
+        uintptr_t ram_static = data_sz + bss_sz;
+        printf("Footprint: ROM (text+rodata) %lu bytes, RAM static (data+bss) %lu bytes\n",
+               (unsigned long)rom_sz, (unsigned long)ram_static);
+        if (g_heap_base || g_heap_after_hs || g_heap_after_app) {
+            uintptr_t heap_hs_delta  = (g_heap_after_hs > g_heap_base) ? (g_heap_after_hs - g_heap_base) : 0;
+            uintptr_t heap_app_delta = (g_heap_after_app > g_heap_after_hs) ? (g_heap_after_app - g_heap_after_hs) : 0;
+            printf("Heap usage: base %lu bytes, +%lu during handshake, +%lu after app data (total %lu)\n",
+                   (unsigned long)g_heap_base,
+                   (unsigned long)heap_hs_delta,
+                   (unsigned long)heap_app_delta,
+                   (unsigned long)(g_heap_after_app));
+        }
+    }
 
     return 0;
 }
